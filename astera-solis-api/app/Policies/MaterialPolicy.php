@@ -4,16 +4,20 @@ namespace App\Policies;
 
 use App\Models\Material;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class MaterialPolicy
 {
+    public function before(User $user, string $ability): bool|null
+    {
+        return $user->isAdmin() ? true : null;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->isEditor() || $user->isTeacher() || $user->isStudent();
     }
 
     /**
@@ -21,7 +25,7 @@ class MaterialPolicy
      */
     public function view(User $user, Material $material): bool
     {
-        return false;
+        return $user->isEditor() || $user->isTeacher() || $user->isStudent();
     }
 
     /**
@@ -29,7 +33,7 @@ class MaterialPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**
@@ -37,7 +41,7 @@ class MaterialPolicy
      */
     public function update(User $user, Material $material): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**
@@ -45,7 +49,7 @@ class MaterialPolicy
      */
     public function delete(User $user, Material $material): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**

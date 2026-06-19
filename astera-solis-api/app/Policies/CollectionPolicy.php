@@ -4,16 +4,20 @@ namespace App\Policies;
 
 use App\Models\Collection;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CollectionPolicy
 {
+    public function before(User $user, string $ability): bool|null
+    {
+        return $user->isAdmin() ? true : null;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->isEditor() || $user->isTeacher() || $user->isStudent();
     }
 
     /**
@@ -21,7 +25,7 @@ class CollectionPolicy
      */
     public function view(User $user, Collection $collection): bool
     {
-        return false;
+        return $user->isEditor() || $user->isTeacher() || $user->isStudent();
     }
 
     /**
@@ -29,7 +33,7 @@ class CollectionPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**
@@ -37,7 +41,7 @@ class CollectionPolicy
      */
     public function update(User $user, Collection $collection): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**
@@ -45,7 +49,7 @@ class CollectionPolicy
      */
     public function delete(User $user, Collection $collection): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**

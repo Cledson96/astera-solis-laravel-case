@@ -4,16 +4,20 @@ namespace App\Policies;
 
 use App\Models\Quiz;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class QuizPolicy
 {
+    public function before(User $user, string $ability): bool|null
+    {
+        return $user->isAdmin() ? true : null;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->isEditor() || $user->isTeacher() || $user->isStudent();
     }
 
     /**
@@ -21,7 +25,7 @@ class QuizPolicy
      */
     public function view(User $user, Quiz $quiz): bool
     {
-        return false;
+        return $user->isEditor() || $user->isTeacher() || $user->isStudent();
     }
 
     /**
@@ -29,7 +33,7 @@ class QuizPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**
@@ -37,7 +41,7 @@ class QuizPolicy
      */
     public function update(User $user, Quiz $quiz): bool
     {
-        return false;
+        return $user->isEditor();
     }
 
     /**
@@ -45,7 +49,17 @@ class QuizPolicy
      */
     public function delete(User $user, Quiz $quiz): bool
     {
-        return false;
+        return $user->isEditor();
+    }
+
+    public function viewAttempts(User $user, Quiz $quiz): bool
+    {
+        return $user->isTeacher();
+    }
+
+    public function attempt(User $user, Quiz $quiz): bool
+    {
+        return $user->isStudent();
     }
 
     /**

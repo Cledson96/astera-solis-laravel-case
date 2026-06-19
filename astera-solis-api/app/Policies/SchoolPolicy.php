@@ -4,10 +4,14 @@ namespace App\Policies;
 
 use App\Models\School;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class SchoolPolicy
 {
+    public function before(User $user, string $ability): bool|null
+    {
+        return $user->isAdmin() ? true : null;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
