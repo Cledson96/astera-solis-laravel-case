@@ -1,0 +1,11 @@
+GUIA-COMANDOS-LARAVEL-NEXT-ASTERA.md
+*.log
+.env
+.env.*
+!.env.example
+node_modules/
+vendor/
+.next/
+dist/
+build/
+storage/logs/
