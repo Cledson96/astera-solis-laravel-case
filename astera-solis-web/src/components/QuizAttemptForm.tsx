@@ -1,0 +1,118 @@
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import { apiFetch, csrf } from "@/lib/api";
+import type { QuizAttemptDto, QuizDto } from "@/lib/types";
+
+type QuizAttemptFormProps = {
+  quiz: QuizDto;
+};
+
+export function QuizAttemptForm({ quiz }: QuizAttemptFormProps) {
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [attempt, setAttempt] = useState<QuizAttemptDto | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const questions = useMemo(() => quiz.questions ?? [], [quiz.questions]);
+
+  const answeredCount = useMemo(
+    () => questions.filter((question) => answers[String(question.id)]).length,
+    [answers, questions],
+  );
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAttempt(null);
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await csrf();
+      const response = await apiFetch(`/api/quizzes/${quiz.id}/attempts`, {
+        method: "POST",
+        body: JSON.stringify({ answers }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        setError(payload?.message ?? "Nao foi possivel enviar a tentativa para a API.");
+        return;
+      }
+
+      const payload = (await response.json()) as { data: QuizAttemptDto };
+      setAttempt(payload.data);
+    } catch {
+      setError("Nao foi possivel conectar com a API Laravel.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="rounded-lg border border-line bg-surface p-5 text-sm shadow-sm">
+        <p className="font-semibold text-foreground">Este quiz ainda nao tem perguntas na API.</p>
+        <p className="mt-2 text-muted">Cadastre perguntas no seeder ou pelo banco para praticar tentativas.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {questions.map((question, index) => (
+        <fieldset key={question.id} className="border-line bg-surface rounded-lg border p-4 shadow-sm">
+          <legend className="text-sm font-semibold text-foreground">
+            {index + 1}. {question.statement}
+          </legend>
+          <div className="mt-4 grid gap-2">
+            {Object.entries(question.options).map(([option, label]) => {
+              const id = `${question.id}-${option}`;
+
+              return (
+                <label
+                  key={option}
+                  htmlFor={id}
+                  className="border-line flex cursor-pointer items-center gap-3 rounded-lg border bg-white px-3 py-2 text-sm transition hover:border-accent"
+                >
+                  <input
+                    id={id}
+                    name={`question-${question.id}`}
+                    type="radio"
+                    value={option}
+                    checked={answers[String(question.id)] === option}
+                    onChange={() => setAnswers((current) => ({ ...current, [String(question.id)]: option }))}
+                    className="size-4 accent-teal-700"
+                    required
+                  />
+                  <span className="font-medium">{option}</span>
+                  <span className="text-muted">{label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      ))}
+
+      <div className="border-line bg-surface flex flex-col gap-3 rounded-lg border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium">{answeredCount} de {questions.length} respondidas</p>
+          {attempt === null ? (
+            <p className="text-muted mt-1 text-sm">Nota minima: {quiz.passing_score}%</p>
+          ) : (
+            <p className="mt-1 text-sm font-medium text-emerald-700">
+              Resultado da API: {attempt.score}% ({attempt.approved ? "aprovado" : "revisar"})
+            </p>
+          )}
+          {error ? <p className="mt-2 text-sm font-medium text-rose-700">{error}</p> : null}
+        </div>
+        <button
+          type="submit"
+          disabled={isSubmitting || answeredCount < questions.length}
+          className="min-h-11 rounded-lg bg-foreground px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? "Enviando..." : "Enviar respostas"}
+        </button>
+      </div>
+    </form>
+  );
+}

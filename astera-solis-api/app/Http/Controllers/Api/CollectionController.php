@@ -20,7 +20,10 @@ class CollectionController extends Controller
         $this->authorize('viewAny', Collection::class);
 
         return CollectionResource::collection(
-            Collection::query()->latest()->paginate()
+            Collection::query()
+                ->withCount(['materials', 'quizzes'])
+                ->latest()
+                ->paginate()
         );
     }
 
@@ -42,6 +45,8 @@ class CollectionController extends Controller
     public function show(Collection $collection): CollectionResource
     {
         $this->authorize('view', $collection);
+
+        $collection->loadCount(['materials', 'quizzes']);
 
         return new CollectionResource($collection);
     }

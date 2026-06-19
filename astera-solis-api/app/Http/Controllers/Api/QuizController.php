@@ -20,7 +20,11 @@ class QuizController extends Controller
         $this->authorize('viewAny', Quiz::class);
 
         return QuizResource::collection(
-            Quiz::query()->latest()->paginate()
+            Quiz::query()
+                ->with('collection')
+                ->withCount('questions')
+                ->latest()
+                ->paginate()
         );
     }
 
@@ -42,6 +46,9 @@ class QuizController extends Controller
     public function show(Quiz $quiz): QuizResource
     {
         $this->authorize('view', $quiz);
+
+        $quiz->load(['collection', 'questions']);
+        $quiz->loadCount('questions');
 
         return new QuizResource($quiz);
     }

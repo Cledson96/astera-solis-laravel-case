@@ -20,7 +20,10 @@ class MaterialController extends Controller
         $this->authorize('viewAny', Material::class);
 
         return MaterialResource::collection(
-            Material::query()->latest()->paginate()
+            Material::query()
+                ->with('collection')
+                ->latest()
+                ->paginate()
         );
     }
 
@@ -42,6 +45,8 @@ class MaterialController extends Controller
     public function show(Material $material): MaterialResource
     {
         $this->authorize('view', $material);
+
+        $material->load('collection');
 
         return new MaterialResource($material);
     }

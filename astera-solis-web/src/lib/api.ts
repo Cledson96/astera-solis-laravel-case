@@ -1,4 +1,22 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+const csrfMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookie = document.cookie
+    .split("; ")
+    .find((item) => item.startsWith(`${name}=`));
+
+  if (!cookie) {
+    return null;
+  }
+
+  return decodeURIComponent(cookie.split("=").slice(1).join("="));
+}
 
 function jsonHeaders(headers?: HeadersInit): Headers {
   const mergedHeaders = new Headers(headers);
@@ -15,18 +33,30 @@ function jsonHeaders(headers?: HeadersInit): Headers {
 }
 
 export async function csrf(): Promise<void> {
-  await fetch(`${API_URL}/sanctum/csrf-cookie`, {
+  const response = await fetch(`${API_URL}/sanctum/csrf-cookie`, {
     credentials: "include",
   });
+
+  if (!response.ok) {
+    throw new Error("Nao foi possivel iniciar a protecao CSRF.");
+  }
 }
 
 export async function apiFetch(
   path: string,
   options: RequestInit = {},
 ): Promise<Response> {
+  const headers = jsonHeaders(options.headers);
+  const method = (options.method ?? "GET").toUpperCase();
+  const xsrfToken = getCookie("XSRF-TOKEN");
+
+  if (csrfMethods.has(method) && xsrfToken && !headers.has("X-XSRF-TOKEN")) {
+    headers.set("X-XSRF-TOKEN", xsrfToken);
+  }
+
   return fetch(`${API_URL}${path}`, {
     ...options,
     credentials: "include",
-    headers: jsonHeaders(options.headers),
+    headers,
   });
 }
