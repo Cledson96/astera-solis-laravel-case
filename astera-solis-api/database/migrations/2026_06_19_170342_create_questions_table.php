@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('schools', function (Blueprint $table) {
+        Schema::create('questions', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('city');
-            $table->string('state', 2);
-            $table->string('inep_code')->nullable();
-            $table->boolean('active')->default(true);
+            $table->foreignId('quiz_id')->constrained()->cascadeOnDelete();
+            $table->text('statement');
+            $table->json('options');
+            $table->string('correct_option');
+            $table->integer('points')->default(1);
             $table->timestamps();
         });
     }
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('schools');
+        Schema::dropIfExists('questions');
     }
 };
