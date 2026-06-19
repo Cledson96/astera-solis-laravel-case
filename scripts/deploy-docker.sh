@@ -12,6 +12,8 @@ API_DOMAIN="${API_DOMAIN:?API_DOMAIN obrigatoria}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 API_PORT="${API_PORT:-8000}"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
+CERTBOT_ATTEMPTS="${CERTBOT_ATTEMPTS:-3}"
+CERTBOT_RETRY_SLEEP_SECONDS="${CERTBOT_RETRY_SLEEP_SECONDS:-20}"
 HEALTHCHECK_ATTEMPTS="${HEALTHCHECK_ATTEMPTS:-12}"
 HEALTHCHECK_SLEEP_SECONDS="${HEALTHCHECK_SLEEP_SECONDS:-5}"
 PORT_SCAN_LIMIT="${PORT_SCAN_LIMIT:-20}"
@@ -168,11 +170,29 @@ reload_nginx() {
 
 issue_certificate_if_missing() {
   local domain="$1"
+  local attempt=1
 
   if certificate_exists "${domain}"; then
     log "certificado ja existe para ${domain}"
     return
   fi
+
+  until run_certbot "${domain}"; do
+    if [ "${attempt}" -ge "${CERTBOT_ATTEMPTS}" ]; then
+      log "certbot falhou para ${domain} apos ${CERTBOT_ATTEMPTS} tentativas"
+      return 1
+    fi
+
+    log "certbot falhou para ${domain}; nova tentativa em ${CERTBOT_RETRY_SLEEP_SECONDS}s"
+    attempt=$((attempt + 1))
+    sleep "${CERTBOT_RETRY_SLEEP_SECONDS}"
+  done
+
+  log "certificado emitido para ${domain}"
+}
+
+run_certbot() {
+  local domain="$1"
 
   if [ -n "${CERTBOT_EMAIL}" ]; then
     sudo_run certbot --nginx -d "${domain}" --redirect --email "${CERTBOT_EMAIL}" --agree-tos --non-interactive --keep-until-expiring
