@@ -13,5 +13,7 @@ class LogoutUser
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        Auth::forgetGuards();
     }
 }
