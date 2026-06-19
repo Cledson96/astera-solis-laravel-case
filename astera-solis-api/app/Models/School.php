@@ -9,4 +9,9 @@ class School extends Model
 {
     /** @use HasFactory<\Database\Factories\SchoolFactory> */
     use HasFactory;
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
 }
