@@ -1,0 +1,11 @@
+flowchart LR
+  Admin["Admin"] --> Schools["Escolas"]
+  Admin --> Users["Usuarios"]
+  Editor["Editor"] --> Collections["Colecoes"]
+  Collections --> Materials["Materiais"]
+  Collections --> Quizzes["Quizzes"]
+  Quizzes --> Questions["Questoes"]
+  Student["Student"] --> Attempts["Tentativas"]
+  Attempts --> Quizzes
+  Teacher["Teacher"] --> Reports["Consulta educacional"]
+  Reports --> Attempts

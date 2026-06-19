@@ -1,0 +1,17 @@
+flowchart LR
+  Dev["Push main"]
+  Actions["GitHub Actions"]
+  Tests["Testes e build"]
+  GHCR["GHCR"]
+  VPS["VPS"]
+  Compose["Docker Compose"]
+  Nginx["nginx + certbot"]
+  Browser["Browser"]
+
+  Dev --> Actions
+  Actions --> Tests
+  Tests --> GHCR
+  Actions --> VPS
+  VPS --> Compose
+  Compose --> Nginx
+  Nginx --> Browser

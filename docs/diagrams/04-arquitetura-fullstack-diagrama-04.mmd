@@ -1,0 +1,15 @@
+sequenceDiagram
+  participant E as Editor
+  participant W as Next.js
+  participant A as CollectionController
+  participant R as StoreCollectionRequest
+  participant P as CollectionPolicy
+  participant DB as PostgreSQL
+
+  E->>W: Envia formulario de colecao
+  W->>A: POST /api/collections
+  A->>R: Valida payload
+  A->>P: Autoriza create
+  P->>A: Permite admin/editor
+  A->>DB: INSERT collections
+  A->>W: CollectionResource JSON

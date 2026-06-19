@@ -1,0 +1,22 @@
+flowchart TB
+  Push["Push na main"]
+  BackendCI["Backend CI"]
+  FrontendCI["Frontend CI"]
+  Build["Build Docker"]
+  GHCR["Push GHCR"]
+  SSH["SSH na VPS"]
+  Env["Gera .env de deploy"]
+  Compose["docker compose pull + up"]
+  Nginx["nginx + certbot"]
+  Health["Healthchecks"]
+
+  Push --> BackendCI
+  Push --> FrontendCI
+  BackendCI --> Build
+  FrontendCI --> Build
+  Build --> GHCR
+  GHCR --> SSH
+  SSH --> Env
+  Env --> Compose
+  Compose --> Nginx
+  Nginx --> Health

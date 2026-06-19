@@ -1,0 +1,16 @@
+sequenceDiagram
+  participant U as Usuario
+  participant W as Next.js
+  participant A as Laravel API
+  participant S as Sanctum
+  participant DB as PostgreSQL
+
+  U->>W: Preenche email e senha
+  W->>A: GET /sanctum/csrf-cookie
+  A->>W: Cookie XSRF-TOKEN
+  W->>A: POST /api/auth/login
+  A->>DB: Valida usuario
+  A->>S: Cria sessao
+  A->>W: Cookie de sessao HttpOnly
+  W->>A: GET /api/auth/me
+  A->>W: Dados do usuario logado

@@ -1,0 +1,23 @@
+flowchart TB
+  User["Usuario no browser"]
+  Next["Next.js App Router"]
+  Laravel["Laravel API"]
+  Sanctum["Laravel Sanctum"]
+  Policies["Policies"]
+  Services["Services e Actions"]
+  Eloquent["Eloquent Models"]
+  Postgres["PostgreSQL"]
+  Redis["Redis"]
+  Worker["Queue Worker"]
+
+  User --> Next
+  Next -->|HTTP com credentials include| Laravel
+  Laravel --> Sanctum
+  Laravel --> Policies
+  Laravel --> Services
+  Services --> Eloquent
+  Laravel --> Eloquent
+  Eloquent --> Postgres
+  Laravel --> Redis
+  Worker --> Redis
+  Worker --> Laravel

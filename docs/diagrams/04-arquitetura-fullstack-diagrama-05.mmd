@@ -1,0 +1,16 @@
+sequenceDiagram
+  participant S as Student
+  participant W as Next.js
+  participant C as QuizAttemptController
+  participant V as SubmitQuizAttemptRequest
+  participant A as SubmitQuizAttempt
+  participant DB as PostgreSQL
+
+  S->>W: Responde quiz
+  W->>C: POST /api/quizzes/{quiz}/attempts
+  C->>V: Valida respostas
+  C->>A: handle(user, quiz, answers)
+  A->>DB: Busca questoes e gabarito
+  A->>A: Calcula score e approved
+  A->>DB: INSERT quiz_attempts
+  C->>W: Resultado da tentativa
