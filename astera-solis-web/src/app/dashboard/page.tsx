@@ -1,10 +1,13 @@
 "use client";
 
+import { ClipboardList, FileText, LibraryBig, UserCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { ApiRequestError, readApiCollection, readApiRaw } from "@/lib/read-api";
 import { ApiFeedback, ErrorState, LoadingState } from "@/components/ApiFeedback";
 import { AppShell } from "@/components/AppShell";
+import { Badge } from "@/components/Badge";
 import { StatCard } from "@/components/StatCard";
+import { formatMaterialType, formatRole } from "@/lib/format";
+import { ApiRequestError, readApiCollection, readApiRaw } from "@/lib/read-api";
 import type { CollectionDto, MaterialDto, QuizDto, UserDto } from "@/lib/types";
 
 type DashboardData = {
@@ -67,7 +70,7 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const recentMaterials = useMemo(() => data?.materials.slice(0, 4) ?? [], [data]);
+  const recentMaterials = useMemo(() => data?.materials.slice(0, 5) ?? [], [data]);
 
   return (
     <AppShell
@@ -84,39 +87,50 @@ export default function DashboardPage() {
       {data ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Usuario" value={data.user.role} detail={data.user.email} tone="teal" />
-            <StatCard label="Colecoes" value={String(data.collections.length)} detail="Trilhas didaticas retornadas pela API." tone="indigo" />
-            <StatCard label="Materiais" value={String(data.materials.length)} detail="Ebooks, videos, PDFs e jogos cadastrados." tone="amber" />
-            <StatCard label="Quizzes" value={String(data.quizzes.length)} detail="Simulados disponiveis para estudantes." tone="rose" />
+            <StatCard icon={UserCircle} label="Usuario" value={formatRole(data.user.role)} detail={data.user.email} tone="teal" />
+            <StatCard icon={LibraryBig} label="Colecoes" value={String(data.collections.length)} detail="Trilhas didaticas retornadas pela API." tone="indigo" />
+            <StatCard icon={FileText} label="Materiais" value={String(data.materials.length)} detail="Ebooks, videos, PDFs e jogos cadastrados." tone="amber" />
+            <StatCard icon={ClipboardList} label="Quizzes" value={String(data.quizzes.length)} detail="Simulados disponiveis para estudantes." tone="rose" />
           </div>
 
-          <section className="mt-6 rounded-lg border border-line bg-surface p-4 shadow-sm">
-            <h2 className="text-base font-semibold tracking-tight">Materiais recentes</h2>
+          <section className="mt-6 overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
+            <div className="flex flex-col gap-2 border-b border-line bg-surface-raised px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Materiais recentes</h2>
+                <p className="mt-1 text-sm text-muted">Ultimos recursos retornados pelo endpoint de materiais.</p>
+              </div>
+              <Badge tone="teal">{recentMaterials.length} itens</Badge>
+            </div>
+
             {recentMaterials.length === 0 ? (
-              <div className="mt-4">
+              <div className="p-4">
                 <ApiFeedback title="Nenhum material retornado" message="Crie materiais na API ou rode os seeders para preencher esta lista." />
               </div>
             ) : (
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <thead className="border-b border-line text-muted">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <thead className="border-b border-line bg-background text-muted">
                     <tr>
-                      <th className="py-2 pr-4 font-medium">Item</th>
-                      <th className="py-2 pr-4 font-medium">Tipo</th>
-                      <th className="py-2 pr-4 font-medium">Colecao</th>
-                      <th className="py-2 font-medium">Status</th>
+                      <th className="px-4 py-3 font-semibold">Item</th>
+                      <th className="px-4 py-3 font-semibold">Tipo</th>
+                      <th className="px-4 py-3 font-semibold">Colecao</th>
+                      <th className="px-4 py-3 font-semibold">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
                     {recentMaterials.map((material) => (
-                      <tr key={material.id}>
-                        <td className="py-3 pr-4 font-medium">{material.title}</td>
-                        <td className="py-3 pr-4 text-muted">{material.type}</td>
-                        <td className="py-3 pr-4 text-muted">
-                          {material.collection?.title ?? `Colecao #${material.collection_id}`}
+                      <tr key={material.id} className="transition-colors hover:bg-surface-raised">
+                        <td className="px-4 py-3 font-medium text-foreground">{material.title}</td>
+                        <td className="px-4 py-3">
+                          <Badge tone="sky">{formatMaterialType(material.type)}</Badge>
                         </td>
-                        <td className={material.active ? "py-3 text-emerald-700" : "py-3 text-muted"}>
-                          {material.active ? "ativo" : "inativo"}
+                        <td className="px-4 py-3 text-muted">
+                          {material.collection?.title ?? "Colecao #" + material.collection_id}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge tone={material.active ? "emerald" : "neutral"}>
+                            {material.active ? "Ativo" : "Inativo"}
+                          </Badge>
                         </td>
                       </tr>
                     ))}

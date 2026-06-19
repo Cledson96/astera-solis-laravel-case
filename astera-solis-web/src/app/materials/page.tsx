@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { ApiFeedback, ErrorState, LoadingState } from "@/components/ApiFeedback";
 import { AppShell } from "@/components/AppShell";
+import { Badge } from "@/components/Badge";
+import { formatMaterialType } from "@/lib/format";
 import { readApiCollection } from "@/lib/read-api";
 import type { MaterialDto } from "@/lib/types";
 
@@ -50,28 +52,59 @@ export default function MaterialsPage() {
 
       {materials.length > 0 ? (
         <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+          <div className="flex flex-col gap-2 border-b border-line bg-surface-raised px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Catalogo de materiais</h2>
+              <p className="mt-1 text-sm text-muted">Recursos vinculados as colecoes didaticas.</p>
+            </div>
+            <Badge tone="teal">{materials.length} registros</Badge>
+          </div>
+          <div className="grid gap-3 p-4 md:hidden">
+            {materials.map((material) => (
+              <article key={material.id} className="rounded-lg border border-line bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-semibold text-foreground">{material.title}</h3>
+                  <Badge tone={material.active ? "emerald" : "neutral"}>
+                    {material.active ? "Ativo" : "Inativo"}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted">
+                  {material.collection?.title ?? "Colecao #" + material.collection_id}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Badge tone="sky">{formatMaterialType(material.type)}</Badge>
+                  <Badge>{material.estimated_minutes} min</Badge>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[820px] text-left text-sm">
               <thead className="border-b border-line bg-background text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Titulo</th>
-                  <th className="px-4 py-3 font-medium">Tipo</th>
-                  <th className="px-4 py-3 font-medium">Colecao</th>
-                  <th className="px-4 py-3 font-medium">Tempo</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-semibold">Titulo</th>
+                  <th className="px-4 py-3 font-semibold">Tipo</th>
+                  <th className="px-4 py-3 font-semibold">Colecao</th>
+                  <th className="px-4 py-3 font-semibold">Tempo</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {materials.map((material) => (
-                  <tr key={material.id} className="hover:bg-background">
-                    <td className="px-4 py-3 font-medium">{material.title}</td>
-                    <td className="px-4 py-3 text-muted">{material.type}</td>
+                  <tr key={material.id} className="transition-colors hover:bg-surface-raised">
+                    <td className="px-4 py-3 font-medium text-foreground">{material.title}</td>
+                    <td className="px-4 py-3">
+                      <Badge tone="sky">{formatMaterialType(material.type)}</Badge>
+                    </td>
                     <td className="px-4 py-3 text-muted">
-                      {material.collection?.title ?? `Colecao #${material.collection_id}`}
+                      {material.collection?.title ?? "Colecao #" + material.collection_id}
                     </td>
                     <td className="px-4 py-3 text-muted">{material.estimated_minutes} min</td>
-                    <td className={material.active ? "px-4 py-3 text-emerald-700" : "px-4 py-3 text-muted"}>
-                      {material.active ? "ativo" : "inativo"}
+                    <td className="px-4 py-3">
+                      <Badge tone={material.active ? "emerald" : "neutral"}>
+                        {material.active ? "Ativo" : "Inativo"}
+                      </Badge>
                     </td>
                   </tr>
                 ))}

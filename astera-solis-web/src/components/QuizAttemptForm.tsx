@@ -1,6 +1,8 @@
 "use client";
 
+import { CheckCircle2, Send, XCircle } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import { Badge } from "@/components/Badge";
 import { apiFetch, csrf } from "@/lib/api";
 import type { QuizAttemptDto, QuizDto } from "@/lib/types";
 
@@ -28,7 +30,7 @@ export function QuizAttemptForm({ quiz }: QuizAttemptFormProps) {
 
     try {
       await csrf();
-      const response = await apiFetch(`/api/quizzes/${quiz.id}/attempts`, {
+      const response = await apiFetch("/api/quizzes/" + quiz.id + "/attempts", {
         method: "POST",
         body: JSON.stringify({ answers }),
       });
@@ -60,31 +62,36 @@ export function QuizAttemptForm({ quiz }: QuizAttemptFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {questions.map((question, index) => (
-        <fieldset key={question.id} className="border-line bg-surface rounded-lg border p-4 shadow-sm">
-          <legend className="text-sm font-semibold text-foreground">
+        <fieldset key={question.id} className="rounded-lg border border-line bg-surface p-4 shadow-sm">
+          <legend className="px-1 text-sm font-semibold text-foreground">
             {index + 1}. {question.statement}
           </legend>
           <div className="mt-4 grid gap-2">
             {Object.entries(question.options).map(([option, label]) => {
-              const id = `${question.id}-${option}`;
+              const id = String(question.id) + "-" + option;
+              const selected = answers[String(question.id)] === option;
+              const optionClasses = [
+                "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition",
+                selected
+                  ? "border-accent bg-accent-soft text-foreground"
+                  : "border-line bg-white text-foreground hover:border-accent hover:bg-surface-raised",
+              ].join(" ");
 
               return (
-                <label
-                  key={option}
-                  htmlFor={id}
-                  className="border-line flex cursor-pointer items-center gap-3 rounded-lg border bg-white px-3 py-2 text-sm transition hover:border-accent"
-                >
+                <label key={option} htmlFor={id} className={optionClasses}>
                   <input
                     id={id}
-                    name={`question-${question.id}`}
+                    name={"question-" + question.id}
                     type="radio"
                     value={option}
-                    checked={answers[String(question.id)] === option}
+                    checked={selected}
                     onChange={() => setAnswers((current) => ({ ...current, [String(question.id)]: option }))}
                     className="size-4 accent-teal-700"
                     required
                   />
-                  <span className="font-medium">{option}</span>
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white text-xs font-bold text-accent-strong">
+                    {option}
+                  </span>
                   <span className="text-muted">{label}</span>
                 </label>
               );
@@ -93,24 +100,27 @@ export function QuizAttemptForm({ quiz }: QuizAttemptFormProps) {
         </fieldset>
       ))}
 
-      <div className="border-line bg-surface flex flex-col gap-3 rounded-lg border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium">{answeredCount} de {questions.length} respondidas</p>
-          {attempt === null ? (
-            <p className="text-muted mt-1 text-sm">Nota minima: {quiz.passing_score}%</p>
-          ) : (
-            <p className="mt-1 text-sm font-medium text-emerald-700">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold">{answeredCount} de {questions.length} respondidas</p>
+            <Badge tone="emerald">Minimo {quiz.passing_score}%</Badge>
+          </div>
+          {attempt ? (
+            <p className={attempt.approved ? "mt-2 flex items-center gap-2 text-sm font-semibold text-success" : "mt-2 flex items-center gap-2 text-sm font-semibold text-danger"}>
+              {attempt.approved ? <CheckCircle2 className="size-4" aria-hidden="true" /> : <XCircle className="size-4" aria-hidden="true" />}
               Resultado da API: {attempt.score}% ({attempt.approved ? "aprovado" : "revisar"})
             </p>
-          )}
-          {error ? <p className="mt-2 text-sm font-medium text-rose-700">{error}</p> : null}
+          ) : null}
+          {error ? <p className="mt-2 text-sm font-semibold text-danger">{error}</p> : null}
         </div>
         <button
           type="submit"
           disabled={isSubmitting || answeredCount < questions.length}
-          className="min-h-11 rounded-lg bg-foreground px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Enviando..." : "Enviar respostas"}
+          <Send className="size-4" aria-hidden="true" />
         </button>
       </div>
     </form>
