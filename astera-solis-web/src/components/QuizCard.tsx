@@ -1,13 +1,15 @@
 import { ArrowRight, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/Badge";
 import type { QuizDto } from "@/lib/types";
 
 type QuizCardProps = {
   quiz: QuizDto;
+  actions?: ReactNode;
 };
 
-export function QuizCard({ quiz }: QuizCardProps) {
+export function QuizCard({ quiz, actions }: QuizCardProps) {
   return (
     <article className="rounded-lg border border-line bg-surface p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -35,6 +37,7 @@ export function QuizCard({ quiz }: QuizCardProps) {
           <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </div>
+      {actions ? <div className="mt-4 border-t border-line pt-4">{actions}</div> : null}
     </article>
   );
 }

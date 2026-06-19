@@ -1,13 +1,15 @@
 import { ClipboardList, FileText, LibraryBig } from "lucide-react";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/Badge";
 import { formatSegment } from "@/lib/format";
 import type { CollectionDto } from "@/lib/types";
 
 type CollectionCardProps = {
   collection: CollectionDto;
+  actions?: ReactNode;
 };
 
-export function CollectionCard({ collection }: CollectionCardProps) {
+export function CollectionCard({ collection, actions }: CollectionCardProps) {
   return (
     <article className="rounded-lg border border-line bg-surface p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
@@ -44,6 +46,7 @@ export function CollectionCard({ collection }: CollectionCardProps) {
           </div>
         </div>
       </dl>
+      {actions ? <div className="mt-4 border-t border-line pt-4">{actions}</div> : null}
     </article>
   );
 }

@@ -1,0 +1,250 @@
+name: CI e Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: astera-solis-production
+  cancel-in-progress: false
+
+env:
+  API_IMAGE: ghcr.io/cledson96/astera-solis-laravel-case-api
+  WEB_IMAGE: ghcr.io/cledson96/astera-solis-laravel-case-web
+  NODE_VERSION: "24"
+  PHP_VERSION: "8.4"
+
+jobs:
+  backend-ci:
+    name: Backend Laravel
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: astera-solis-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_sqlite, pdo_pgsql, redis
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run Laravel tests
+        run: php artisan test
+
+      - name: Check Laravel style
+        run: vendor/bin/pint --test
+
+  frontend-ci:
+    name: Frontend Next.js
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: astera-solis-web
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: astera-solis-web/package-lock.json
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+  build-push:
+    name: Build e push Docker
+    runs-on: ubuntu-latest
+    needs:
+      - backend-ci
+      - frontend-ci
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./astera-solis-api
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:${{ github.sha }}
+            ${{ env.API_IMAGE }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./astera-solis-web
+          push: true
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+            ${{ env.WEB_IMAGE }}:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ vars.API_DOMAIN }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    name: Deploy VPS
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/astera-solis' }}
+      COMPOSE_PROJECT_NAME: ${{ vars.COMPOSE_PROJECT_NAME || 'astera-solis-production' }}
+      DEPLOY_ENVIRONMENT: production
+      FRONTEND_DOMAIN: ${{ vars.FRONTEND_DOMAIN }}
+      API_DOMAIN: ${{ vars.API_DOMAIN }}
+      SESSION_DOMAIN: ${{ vars.SESSION_DOMAIN }}
+      FRONTEND_PORT: ${{ vars.FRONTEND_PORT || '3000' }}
+      API_PORT: ${{ vars.API_PORT || '8000' }}
+      POSTGRES_DB: ${{ vars.POSTGRES_DB || 'astera_solis' }}
+      POSTGRES_USER: ${{ vars.POSTGRES_USER || 'astera' }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL || secrets.CERTBOT_EMAIL || '' }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      GHCR_USER: ${{ github.actor }}
+      GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Prepare SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Generate deploy env files
+        run: |
+          cat > /tmp/astera.env <<EOF
+          COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME
+          API_IMAGE=$API_IMAGE:${{ github.sha }}
+          WEB_IMAGE=$WEB_IMAGE:${{ github.sha }}
+          FRONTEND_PORT=$FRONTEND_PORT
+          API_PORT=$API_PORT
+          POSTGRES_DB=$POSTGRES_DB
+          POSTGRES_USER=$POSTGRES_USER
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          RUN_MIGRATIONS_ON_DEPLOY=true
+          RUN_SEED_ON_DEPLOY=true
+          EOF
+
+          cat > /tmp/astera.api.env <<EOF
+          APP_NAME="Astera Solis API"
+          APP_ENV=production
+          APP_KEY=$APP_KEY
+          APP_DEBUG=false
+          APP_URL=https://$API_DOMAIN
+          FRONTEND_URL=https://$FRONTEND_DOMAIN
+          APP_LOCALE=pt_BR
+          APP_FALLBACK_LOCALE=pt_BR
+          APP_FAKER_LOCALE=pt_BR
+          APP_MAINTENANCE_DRIVER=file
+          BCRYPT_ROUNDS=12
+          LOG_CHANNEL=stderr
+          LOG_LEVEL=info
+          DB_CONNECTION=pgsql
+          DB_HOST=db
+          DB_PORT=5432
+          DB_DATABASE=$POSTGRES_DB
+          DB_USERNAME=$POSTGRES_USER
+          DB_PASSWORD=$POSTGRES_PASSWORD
+          SESSION_DRIVER=database
+          SESSION_LIFETIME=120
+          SESSION_ENCRYPT=false
+          SESSION_PATH=/
+          SESSION_DOMAIN=$SESSION_DOMAIN
+          SESSION_SECURE_COOKIE=true
+          SESSION_SAME_SITE=lax
+          SANCTUM_STATEFUL_DOMAINS=$FRONTEND_DOMAIN
+          BROADCAST_CONNECTION=log
+          FILESYSTEM_DISK=local
+          QUEUE_CONNECTION=redis
+          CACHE_STORE=redis
+          REDIS_CLIENT=phpredis
+          REDIS_HOST=redis
+          REDIS_PASSWORD=null
+          REDIS_PORT=6379
+          MAIL_MAILER=log
+          MAIL_FROM_ADDRESS=hello@astera-solis.test
+          MAIL_FROM_NAME="Astera Solis API"
+          EOF
+
+          cat > /tmp/astera.web.env <<EOF
+          NODE_ENV=production
+          NEXT_TELEMETRY_DISABLED=1
+          NEXT_PUBLIC_API_URL=https://$API_DOMAIN
+          DEPLOYMENT_VERSION=${{ github.sha }}
+          EOF
+
+          sed -i 's/^          //' /tmp/astera.env /tmp/astera.api.env /tmp/astera.web.env
+
+      - name: Upload infra and deploy
+        run: |
+          SSH_CMD="ssh -i ~/.ssh/id_ed25519 -p $VPS_PORT"
+          SCP_CMD="scp -i ~/.ssh/id_ed25519 -P $VPS_PORT"
+
+          tar -czf /tmp/astera-infra.tgz deploy scripts
+
+          $SCP_CMD /tmp/astera-infra.tgz "$VPS_USER@$VPS_HOST:/tmp/astera-infra.tgz"
+          $SCP_CMD /tmp/astera.env "$VPS_USER@$VPS_HOST:/tmp/astera.env"
+          $SCP_CMD /tmp/astera.api.env "$VPS_USER@$VPS_HOST:/tmp/astera.api.env"
+          $SCP_CMD /tmp/astera.web.env "$VPS_USER@$VPS_HOST:/tmp/astera.web.env"
+
+          $SSH_CMD "$VPS_USER@$VPS_HOST" "
+            set -euo pipefail
+            run_root() { if [ \"\$(id -u)\" -eq 0 ]; then \"\$@\"; else sudo -n \"\$@\"; fi; }
+            run_root mkdir -p '$DEPLOY_PATH'
+            run_root tar -xzf /tmp/astera-infra.tgz -C '$DEPLOY_PATH'
+            run_root cp /tmp/astera.env '$DEPLOY_PATH/.env'
+            run_root cp /tmp/astera.api.env '$DEPLOY_PATH/.env.api'
+            run_root cp /tmp/astera.web.env '$DEPLOY_PATH/.env.web'
+            run_root env DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_ENVIRONMENT='$DEPLOY_ENVIRONMENT' COMPOSE_PROJECT_NAME='$COMPOSE_PROJECT_NAME' FRONTEND_DOMAIN='$FRONTEND_DOMAIN' API_DOMAIN='$API_DOMAIN' FRONTEND_PORT='$FRONTEND_PORT' API_PORT='$API_PORT' CERTBOT_EMAIL='$CERTBOT_EMAIL' GHCR_USER='$GHCR_USER' GHCR_TOKEN='$GHCR_TOKEN' bash '$DEPLOY_PATH/scripts/deploy-docker.sh'
+            rm -f /tmp/astera-infra.tgz /tmp/astera.env /tmp/astera.api.env /tmp/astera.web.env
+          "
