@@ -12,7 +12,7 @@ class UpdateMaterialRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +23,13 @@ class UpdateMaterialRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'collection_id' => ['sometimes', 'required', 'integer', 'exists:collections,id'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'type' => ['sometimes', 'required', 'string', 'in:ebook,video,quiz,pdf,game'],
+            'summary' => ['sometimes', 'nullable', 'string'],
+            'url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'estimated_minutes' => ['sometimes', 'integer', 'min:1'],
+            'active' => ['sometimes', 'boolean'],
         ];
     }
 }

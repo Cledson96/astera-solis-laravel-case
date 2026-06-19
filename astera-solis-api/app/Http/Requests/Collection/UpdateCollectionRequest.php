@@ -4,6 +4,7 @@ namespace App\Http\Requests\Collection;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateCollectionRequest extends FormRequest
 {
@@ -12,7 +13,7 @@ class UpdateCollectionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +24,18 @@ class UpdateCollectionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'slug' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('collections', 'slug')->ignore($this->route('collection')),
+            ],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'segment' => ['sometimes', 'required', 'string', 'in:infantil,fundamental,medio,eja'],
+            'subject' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'active' => ['sometimes', 'boolean'],
         ];
     }
 }

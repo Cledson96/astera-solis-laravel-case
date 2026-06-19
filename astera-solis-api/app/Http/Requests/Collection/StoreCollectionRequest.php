@@ -12,7 +12,7 @@ class StoreCollectionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +23,12 @@ class StoreCollectionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['required', 'string', 'max:255', 'unique:collections,slug'],
+            'description' => ['nullable', 'string'],
+            'segment' => ['required', 'string', 'in:infantil,fundamental,medio,eja'],
+            'subject' => ['nullable', 'string', 'max:255'],
+            'active' => ['sometimes', 'boolean'],
         ];
     }
 }

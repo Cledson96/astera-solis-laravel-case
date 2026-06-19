@@ -12,7 +12,7 @@ class UpdateSchoolRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +23,11 @@ class UpdateSchoolRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'city' => ['sometimes', 'required', 'string', 'max:120'],
+            'state' => ['sometimes', 'required', 'string', 'size:2'],
+            'inep_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'active' => ['sometimes', 'boolean'],
         ];
     }
 }

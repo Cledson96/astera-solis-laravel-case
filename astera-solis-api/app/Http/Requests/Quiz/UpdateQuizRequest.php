@@ -12,7 +12,7 @@ class UpdateQuizRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +23,11 @@ class UpdateQuizRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'collection_id' => ['sometimes', 'required', 'integer', 'exists:collections,id'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'passing_score' => ['sometimes', 'integer', 'between:0,100'],
+            'active' => ['sometimes', 'boolean'],
         ];
     }
 }
